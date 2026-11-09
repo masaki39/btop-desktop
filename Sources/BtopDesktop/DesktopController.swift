@@ -21,8 +21,6 @@ final class DesktopController {
 
         container = NSView(frame: initial)
         container.wantsLayer = true
-        container.layer?.cornerRadius = 12
-        container.layer?.masksToBounds = true
         container.autoresizesSubviews = true
 
         runner = BtopRunner(btopPath: btopPath, frame: initial.insetBy(dx: Self.padding, dy: Self.padding))
