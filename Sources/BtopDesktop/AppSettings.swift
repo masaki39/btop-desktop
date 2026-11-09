@@ -15,6 +15,7 @@ final class AppSettings: ObservableObject {
         static let fontSize = "fontSize"
         static let backgroundOpacity = "backgroundOpacity"
         static let displayUUID = "displayUUID"
+        static let fillsScreen = "fillsScreen"
         static let frames = "framesByDisplay"
     }
 
@@ -43,9 +44,16 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(displayUUID, forKey: Key.displayUUID) }
     }
 
+    /// When true (the default) the window always fills the target display's visible area
+    /// and follows its size. Moving or resizing in edit mode switches to a custom frame.
+    @Published var fillsScreen: Bool {
+        didSet { defaults.set(fillsScreen, forKey: Key.fillsScreen) }
+    }
+
     private init() {
         defaults.register(defaults: [
             Key.isVisible: true,
+            Key.fillsScreen: true,
             Key.fontName: "",
             Key.fontSize: Self.defaultFontSize,
             Key.backgroundOpacity: Self.defaultOpacity,
@@ -55,6 +63,7 @@ final class AppSettings: ObservableObject {
         fontSize = defaults.double(forKey: Key.fontSize)
         backgroundOpacity = defaults.double(forKey: Key.backgroundOpacity)
         displayUUID = defaults.string(forKey: Key.displayUUID)
+        fillsScreen = defaults.bool(forKey: Key.fillsScreen)
     }
 
     // MARK: - Per-display window frames (stored relative to the display origin)

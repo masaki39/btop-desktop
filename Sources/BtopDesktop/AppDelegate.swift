@@ -88,6 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(item("Show on Desktop", #selector(toggleVisible), state: settings.isVisible))
         menu.addItem(item("Edit Mode (Move & Resize)", #selector(toggleEditing), state: controller.isEditing))
+        menu.addItem(item("Fill Screen", #selector(toggleFillsScreen), state: settings.fillsScreen))
 
         // Display selection
         let displayItem = NSMenuItem(title: "Display", action: nil, keyEquivalent: "")
@@ -150,6 +151,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func toggleVisible() {
         controller?.setVisible(!settings.isVisible)
+    }
+
+    @objc private func toggleFillsScreen() {
+        controller?.setFillsScreen(!settings.fillsScreen)
     }
 
     @objc private func toggleEditing() {

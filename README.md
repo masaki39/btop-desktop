@@ -41,6 +41,7 @@ Everything is in the CPU icon in the menu bar.
 | Item | What it does |
 | --- | --- |
 | Show on Desktop | Show or hide. btop is stopped while hidden |
+| Fill Screen | On by default: the window fills the display's visible area (excluding the menu bar and Dock) and follows its size. Moving or resizing in edit mode turns it off; turn it back on to return to full screen |
 | Edit Mode (Move & Resize) | Turns off click-through: drag to move, drag an edge (12 pt) to resize, press Esc to finish. Turning it off saves the position and size and restores click-through. While editing, the window is temporarily raised to the front |
 | Display | Choose which display to use. Dragging the window onto another display in edit mode also switches |
 | Font Size / Background Opacity | Quick presets |
@@ -53,9 +54,9 @@ Everything is in the CPU icon in the menu bar.
 
 The monitor is shown on **one** display at a time — the one selected under **Display** (the primary display by default).
 
-- Position and size are saved per display (by display UUID).
+- By default the window fills the selected display. A custom position and size (after moving or resizing in edit mode) is saved per display (by display UUID).
 - If the selected display is unplugged, the window moves to the primary display. The selection is kept, so it moves back when the display is reconnected.
-- When the display configuration or resolution changes, the window is re-clamped to fit the screen and btop re-lays itself out for the new size.
+- When the display configuration or resolution changes (including after waking from sleep), the window is re-fitted to the screen, and once things settle the terminal is re-measured and btop is told to re-lay itself out for the new size.
 
 ## Where settings live
 

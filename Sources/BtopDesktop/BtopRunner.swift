@@ -71,6 +71,20 @@ final class BtopRunner: NSObject, LocalProcessTerminalViewDelegate {
         kill(pid, SIGKILL)
     }
 
+    /// Re-measures the terminal for the current screen and makes sure btop sees the size.
+    ///
+    /// Reassigning the font recomputes the cell size for the current backing scale and resizes
+    /// the terminal from the current view frame, which also pushes the size to the pty.
+    /// SIGWINCH then makes btop re-read the size; btop ignores it if nothing changed.
+    func resyncSize() {
+        terminalView.font = terminalView.font
+        // The resize soft-resets the terminal, which would show the cursor again.
+        terminalView.feed(text: "\u{1b}[?25l")
+        if isRunning, let pid = terminalView.process?.shellPid, pid > 0 {
+            kill(pid, SIGWINCH)
+        }
+    }
+
     private func launchIfNeeded() {
         guard shouldRun, !isRunning else { return }
         // Clear leftovers from the previous run. Do not use RIS (ESC c): it also resets the terminal size.

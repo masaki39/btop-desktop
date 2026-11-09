@@ -53,6 +53,12 @@ final class DesktopController {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.screensChanged() }
         }
+        // Displays are often plugged or unplugged while the Mac or its screens are asleep.
+        for name in [NSWorkspace.didWakeNotification, NSWorkspace.screensDidWakeNotification] {
+            NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.screensChanged() }
+            }
+        }
     }
 
     // MARK: - Visibility
@@ -102,9 +108,15 @@ final class DesktopController {
     }
 
     private func handleOverlayCommit() {
+        // Untouched full-screen window: keep following the screen size.
+        if settings.fillsScreen, let screen = targetScreen, window.frame == Self.fillFrame(of: screen) {
+            overlay.needsDisplay = true
+            return
+        }
         // Pick the display the window now mostly sits on (it may have been dragged onto another one),
         // pull the window back inside it, then remember that display and frame.
         guard let screen = screenOverlappingMost(window.frame) ?? targetScreen else { return }
+        settings.fillsScreen = false
         let clamped = Self.clamp(window.frame, to: screen.frame)
         if clamped != window.frame { window.setFrame(clamped, display: true) }
         if screen.displayUUID != targetScreen?.displayUUID {
@@ -127,11 +139,39 @@ final class DesktopController {
         applyFrame()
     }
 
+    /// Switches between filling the screen and the saved custom frame.
+    func setFillsScreen(_ fills: Bool) {
+        if !fills { saveCurrentFrame() }
+        settings.fillsScreen = fills
+        applyFrame()
+    }
+
+    private var pendingResync: [DispatchWorkItem] = []
+
     private func screensChanged() {
         // If the selected display was unplugged we temporarily move to the primary display.
         // The selection is kept, so the window returns when the display is reconnected.
-        // Frames are re-clamped, so a resolution change also resizes the window.
+        // Frames are re-fitted, so a resolution change also resizes the window.
         applyFrame()
+        scheduleResync()
+    }
+
+    /// Display hot-plugging fires several notifications while screens, frames and backing scales
+    /// are still settling, so the window and btop may end up sized for an intermediate state.
+    /// Re-apply the frame and re-sync btop once things have settled.
+    private func scheduleResync() {
+        pendingResync.forEach { $0.cancel() }
+        pendingResync = [0.5, 2.0].map { delay in
+            let work = DispatchWorkItem { [weak self] in
+                MainActor.assumeIsolated {
+                    guard let self, self.settings.isVisible else { return }
+                    self.applyFrame()
+                    self.runner.resyncSize()
+                }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+            return work
+        }
     }
 
     private func screenContaining(_ rect: NSRect) -> NSScreen? {
@@ -157,16 +197,23 @@ final class DesktopController {
         return f.integral
     }
 
+    /// Full-screen frame: the visible area (excluding the menu bar and the Dock).
+    private static func fillFrame(of screen: NSScreen) -> NSRect {
+        screen.visibleFrame.integral
+    }
+
     private func applyFrame() {
         guard let screen = targetScreen else { return }
         let sf = screen.frame
         let frame: NSRect
-        if let rel = settings.savedFrame(forDisplay: screen.displayUUID) {
-            frame = rel.offsetBy(dx: sf.minX, dy: sf.minY)
+        if !settings.fillsScreen, let rel = settings.savedFrame(forDisplay: screen.displayUUID) {
+            frame = Self.clamp(rel.offsetBy(dx: sf.minX, dy: sf.minY), to: sf)
         } else {
-            frame = screen.visibleFrame.insetBy(dx: 40, dy: 40)
+            frame = Self.fillFrame(of: screen)
         }
-        window.setFrame(Self.clamp(frame, to: sf), display: true)
+        if window.frame != frame {
+            window.setFrame(frame, display: true)
+        }
     }
 
     private func saveCurrentFrame() {
